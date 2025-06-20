@@ -1,0 +1,25 @@
+# dependencies & transient files
+node_modules
+bun.lockb
+*.log
+npm-debug.log*
+
+# Vite/Tailwind output (if you ever build for production in this image)
+dist
+build
+
+# macOS / editor artefacts
+.DS_Store
+*.swp
+*.swo
+.idea
+.vscode
+
+# Git & docs (you don’t need them inside the image)
+.git
+.gitignore
+README.md
+
+# environment files
+.env
+.env.*

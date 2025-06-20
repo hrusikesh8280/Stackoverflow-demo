@@ -1,0 +1,77 @@
+version: "3.9"
+
+services:
+  # ────────────────────────────────────────
+  # MongoDB  ➜  mongodb://mongo:27017/so
+  # ────────────────────────────────────────
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=so
+
+  # ────────────────────────────────────────
+  # Redis (cache) ➜  redis://redis:6379
+  # ────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+
+  # ────────────────────────────────────────
+  # Backend  (Bun + Express)
+  # ────────────────────────────────────────
+  backend:
+    build: ./backend                       # backend/Dockerfile
+    command: ["bun", "run", "src/index.js"]
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./backend:/app                     # Hot-reload source only
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - mongo
+      - redis
+
+  # ────────────────────────────────────────
+  # Frontend (Bun + Vite + Tailwind)
+  # ────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend                  # frontend/Dockerfile
+      dockerfile: Dockerfile
+    command: ["bun", "run", "dev", "--", "--host"]
+    ports:
+      - "5173:5173"
+    # Mount ONLY source (not node_modules) so native binaries stay Linux-arm64
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/tailwind.config.js:/app/tailwind.config.js
+      - ./frontend/postcss.config.js:/app/postcss.config.js
+    env_file:
+      - ./frontend/.env
+    depends_on:
+      - backend
+
+  # ────────────────────────────────────────
+  # Optional: local LLM (Ollama)
+  # ────────────────────────────────────────
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+
+# ──────────────────────────────────────────
+# Named volumes (persist across rebuilds)
+# ──────────────────────────────────────────
+volumes:
+  mongo-data:
+  redis-data:
+  ollama-data:
