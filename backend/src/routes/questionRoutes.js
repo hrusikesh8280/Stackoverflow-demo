@@ -1,11 +1,10 @@
-import { Router } from 'express';
-const router = Router();
+import express from 'express';
+import { fetchAnswers, recent } from '../controllers/questionController.js';
 
-/*  POST /api/answers
-    body: { question: "..." }
-    (temporary stub) */
-router.post('/', async (req, res) => {
-  res.json({ original: [], reranked: [] });
-});
+const router = express.Router();
+
+router.post('/', fetchAnswers);
+router.get('/recent', recent);
+
 
 export default router;
