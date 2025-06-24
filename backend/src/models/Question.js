@@ -1,3 +1,4 @@
+// models/Question.js - Complete schema with LLM support
 import mongoose from 'mongoose';
 
 const answerSchema = new mongoose.Schema(
@@ -5,7 +6,11 @@ const answerSchema = new mongoose.Schema(
     answer_id: Number,
     body_html: String,
     score: Number,
-    is_accepted: Boolean
+    is_accepted: Boolean,
+    // LLM-specific fields
+    llm_rank: { type: Number, default: null },
+    llm_score: { type: Number, default: null },
+    llm_reasoning: { type: String, default: null }
   },
   { _id: false }
 );
@@ -19,11 +24,20 @@ const questionSchema = new mongoose.Schema(
     tags: [String],
     link: String,
     original_answers: [answerSchema],
+    reranked_answers: [answerSchema], // LLM processed answers
+    
+    // LLM processing metadata
+    isLLMProcessed: { type: Boolean, default: false },
+    llm_processed_at: { type: Date, default: null },
+    llm_provider: { type: String, default: null },
+    llm_processing_time: { type: Number, default: null },
+    
     last_asked: { type: Date, default: Date.now }
   },
   { timestamps: true }
 );
 
 questionSchema.index({ last_asked: -1 });
+questionSchema.index({ isLLMProcessed: 1 });
 
 export default mongoose.model('Question', questionSchema);
