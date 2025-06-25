@@ -186,11 +186,11 @@ const apiClient = axios.create({
 
 apiClient.interceptors.request.use(
   (config) => {
-    console.log(`🔄 Stack Overflow API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    console.log(`stack Overflow API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
-    console.error('❌ Request Error:', error);
+    console.error('Error:', error);
     return Promise.reject(error);
   }
 );
@@ -201,41 +201,38 @@ apiClient.interceptors.response.use(
     return response;
   },
   (error) => {
-    console.error('❌ Response Error:', error.response?.status, error.response?.data);
+    console.error('error:', error.response?.status, error.response?.data);
     return Promise.reject(error);
   }
 );
 
 export async function getAnswersForQuestion(question) {
   try {
-    console.log('🔍 Searching Stack Overflow for:', question);
+    console.log('searching Stack Overflow for:', question);
 
-    // Input validation
     if (!question || question.trim().length < 3) {
-      throw new Error('Question must be at least 3 characters long');
+      throw new Error('question must be at least 3 characters long');
     }
 
     const trimmedQuestion = question.trim();
 
-    // Step 1: Search for questions
     const searchResponse = await apiClient.get('/search/excerpts', {
       params: {
         order: 'desc',
         sort: 'relevance',
         q: trimmedQuestion,
         site: 'stackoverflow',
-        pagesize: 20, // Get more results for better selection
+        pagesize: 20, 
         filter: 'default'
       }
     });
 
-    console.log('📊 Search Results:', {
+    console.log('search Results:', {
       quota_remaining: searchResponse.data.quota_remaining,
       items_found: searchResponse.data.items?.length || 0,
       has_more: searchResponse.data.has_more
     });
 
-    // Check if we have results
     if (!searchResponse.data.items || searchResponse.data.items.length === 0) {
       return {
         success: false,
@@ -250,15 +247,14 @@ export async function getAnswersForQuestion(question) {
       };
     }
 
-    // Filter and sort questions by quality
     const questions = searchResponse.data.items
       .filter(item => 
         item.item_type === 'question' && 
         item.question_id &&
-        item.answer_count > 0 // Only questions with answers
+        item.answer_count > 0 
       )
       .sort((a, b) => {
-        // Prioritize by score, then by answer count
+
         const scoreA = (a.score || 0) * 2 + (a.answer_count || 0);
         const scoreB = (b.score || 0) * 2 + (b.answer_count || 0);
         return scoreB - scoreA;
@@ -279,14 +275,14 @@ export async function getAnswersForQuestion(question) {
       };
     }
 
-    console.log('📝 Best questions found:', questions.slice(0, 3).map(q => ({
+    console.log('best questions found:', questions.slice(0, 3).map(q => ({
       id: q.question_id,
       title: q.title,
       score: q.score,
       answer_count: q.answer_count
     })));
 
-    // Step 2: Get detailed question info
+    
     const selectedQuestion = questions[0];
     const questionId = selectedQuestion.question_id;
 
@@ -298,35 +294,35 @@ export async function getAnswersForQuestion(question) {
     });
 
     if (!questionResponse.data.items || questionResponse.data.items.length === 0) {
-      throw new Error('Selected question details not found');
+      throw new Error('selected question details not found');
     }
 
     const questionDetails = questionResponse.data.items[0];
 
-    // Step 3: Get answers for the question
+    
     const answersResponse = await apiClient.get(`/questions/${questionId}/answers`, {
       params: {
         order: 'desc',
         sort: 'votes',
         site: 'stackoverflow',
         filter: 'withbody',
-        pagesize: 25 // Get more answers for better variety
+        pagesize: 25
       }
     });
 
-    console.log('💬 Answers retrieved:', {
+    console.log('answers retrieved:', {
       count: answersResponse.data.items?.length || 0,
       quota_remaining: answersResponse.data.quota_remaining
     });
 
-    // Step 4: Process and enhance answers
+  
     const rawAnswers = answersResponse.data.items || [];
     
     const processedAnswers = rawAnswers
       .filter(answer => 
         answer.body && 
-        answer.body.length > 100 && // Filter out very short answers
-        !answer.body.includes('[deleted]') // Filter out deleted content
+        answer.body.length > 100 && 
+        !answer.body.includes('[deleted]') 
       )
       .map(answer => ({
         answer_id: answer.answer_id,
@@ -345,20 +341,17 @@ export async function getAnswersForQuestion(question) {
           profile_image: answer.owner?.profile_image,
           link: answer.owner?.link
         },
-        // Additional metadata for UI and potential LLM processing
         word_count: countWords(answer.body),
         has_code: hasCodeBlocks(answer.body),
         quality_score: calculateAnswerQuality(answer)
       }))
       .sort((a, b) => {
-        // Sort by accepted first, then by score, then by quality
         if (a.is_accepted && !b.is_accepted) return -1;
         if (!a.is_accepted && b.is_accepted) return 1;
         if (a.score !== b.score) return b.score - a.score;
         return b.quality_score - a.quality_score;
       });
 
-    // Step 5: Return structured response
     return {
       success: true,
       question: {
@@ -397,7 +390,7 @@ export async function getAnswersForQuestion(question) {
   } catch (error) {
     console.error('💥 Stack Overflow API Error:', error);
     
-    // Enhanced error handling with specific messages
+    
     if (error.response) {
       const status = error.response.status;
       const errorData = error.response.data;
@@ -428,16 +421,16 @@ export async function getAnswersForQuestion(question) {
   }
 }
 
-// Helper function to count words in HTML content
+
 function countWords(html) {
   if (!html) return 0;
   
-  // Remove HTML tags and count words
+ 
   const text = html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
   return text ? text.split(' ').length : 0;
 }
 
-// Helper function to detect code blocks
+
 function hasCodeBlocks(html) {
   if (!html) return false;
   
@@ -449,33 +442,33 @@ function hasCodeBlocks(html) {
          html.includes('class="snippet-code-css"');
 }
 
-// Helper function to calculate answer quality score
+
 function calculateAnswerQuality(answer) {
   let score = 0;
   
-  // Base score from votes
+  
   score += (answer.score || 0) * 10;
   
-  // Bonus for accepted answer
+
   if (answer.is_accepted) score += 100;
   
-  // Length bonus (but not too long)
+ 
   const bodyLength = answer.body ? answer.body.length : 0;
   if (bodyLength > 200) score += 10;
   if (bodyLength > 500) score += 15;
   if (bodyLength > 1000) score += 20;
-  if (bodyLength > 3000) score -= 10; // Penalty for very long answers
+  if (bodyLength > 3000) score -= 10; 
   
-  // Owner reputation bonus
+  
   const reputation = answer.owner?.reputation || 0;
   if (reputation > 1000) score += 5;
   if (reputation > 5000) score += 10;
   if (reputation > 20000) score += 15;
   
-  // Code presence bonus
+ 
   if (hasCodeBlocks(answer.body)) score += 15;
   
-  // Recent activity bonus
+
   if (answer.last_activity_date) {
     const daysSince = (Date.now() / 1000 - answer.last_activity_date) / (24 * 60 * 60);
     if (daysSince < 30) score += 10;
@@ -485,10 +478,10 @@ function calculateAnswerQuality(answer) {
   return Math.max(score, 0);
 }
 
-// Export function to get recent questions (for trending/popular section)
+
 export async function getRecentQuestions(tags = [], limit = 10) {
   try {
-    console.log('📋 Fetching recent Stack Overflow questions');
+    console.log('fetching recent Stack Overflow questions');
     
     const response = await apiClient.get('/questions', {
       params: {
@@ -529,7 +522,7 @@ export async function getRecentQuestions(tags = [], limit = 10) {
     };
 
   } catch (error) {
-    console.error('❌ Error fetching recent questions:', error);
-    throw new Error(`Failed to fetch recent questions: ${error.message}`);
+    console.error('error fetching recent questions:', error);
+    throw new Error(`failed to fetch recent questions: ${error.message}`);
   }
 }

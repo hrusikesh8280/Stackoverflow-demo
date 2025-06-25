@@ -47,28 +47,27 @@
 // }
 
 
-// lib/cache.js - Fixed LLM caching
 import crypto from 'crypto';
 import { redis } from '../config/cache.js';
 
-const LLM_TTL = 60 * 60 * 24; // 24 hours for LLM results
-const TTL = 60 * 30; // 30 minutes for regular cache
+const LLM_TTL = 60 * 60 * 24; 
+const TTL = 60 * 30; 
 
-// LLM Cache functions
+
 export async function getLLM(questionId) {
   try {
     const key = `llm:q:${questionId}`;
     const cached = await redis.get(key);
     
     if (cached) {
-      console.log('🎯 LLM cache hit!');
+      console.log('LLM cache hit!');
       return JSON.parse(cached);
     }
     
-    console.log('❌ LLM cache miss');
+    console.log(' LLM cache miss');
     return null;
   } catch (error) {
-    console.warn('⚠️ LLM cache read error:', error.message);
+    console.warn('LLM cache read error:', error.message);
     return null;
   }
 }
@@ -85,13 +84,12 @@ export async function setLLM(questionId, rerankedAnswers) {
     };
     
     await redis.set(key, JSON.stringify(cacheData), 'EX', LLM_TTL);
-    console.log('✅ LLM result cached');
+    console.log('LLM result cached');
   } catch (error) {
-    console.warn('⚠️ LLM cache write error:', error.message);
+    console.warn('LLM cache write error:', error.message);
   }
 }
 
-// Regular cache functions (existing)
 function key(query) {
   return 'so:ans:' + crypto.createHash('sha1').update(query).digest('hex');
 }
